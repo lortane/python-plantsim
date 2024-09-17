@@ -4,11 +4,13 @@ Distributed under the MIT license, see the accompanying
 file LICENSE or https://opensource.org/licenses/MIT
 """
 
+import os
 import win32com.client as win32
 
 from .error import Error
 from .attribute_explorer import AttributeExplorer
 from .exception import *
+from .table import DataFrame
 
 class Plantsim:
 
@@ -43,7 +45,6 @@ class Plantsim:
             if Error.extract(e.args) == Error.Code.INVALID_LICENSE:
                 raise InvalidLicenseError(self.license_type)
 
-        self.license_type = ''
         self.path_context = ''
         self.event_controller = ''
 
@@ -129,6 +130,32 @@ class Plantsim:
         else:
             self.plantsim.ExecuteSimTalk(command_string)
 
+    def get_table(self, table_name):
+        """
+        Reads the PlantSim table into a pandas DataFrame
+        :param table_name: The name of the table in PlantSim
+        :return: The pandas DataFrame with the table data
+        """
+
+        return DataFrame(self, table_name)
+
+    def set_table(self, table_name, data_frame):
+        """
+        Writes the DataFrame back to the PlantSim table.
+        :param table_name: The name of the table in PlantSim
+        :param data_frame: The pandas DataFrame to write to the table
+        """
+        row_count, col_count = data_frame.shape
+
+        # Set the dimensions of the PlantSim table
+        self.set_value(f'{table_name}.XDim', col_count)
+        self.set_value(f'{table_name}.YDim', row_count)
+
+        # Write the DataFrame to the PlantSim table
+        for row_idx in range(row_count):
+            for col_idx in range(col_count):
+                value = data_frame.iloc[row_idx, col_idx]
+                self.set_value(f'{table_name}[{col_idx + 1}, {row_idx + 1}]', value)
 
     def quit(self):
 
