@@ -147,10 +147,6 @@ class Plantsim:
         """
         row_count, col_count = data_frame.shape
 
-        # Set the dimensions of the PlantSim table
-        self.set_value(f'{table_name}.XDim', col_count)
-        self.set_value(f'{table_name}.YDim', row_count)
-
         # Write the DataFrame to the PlantSim table
         for row_idx in range(row_count):
             for col_idx in range(col_count):
