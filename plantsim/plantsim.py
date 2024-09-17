@@ -53,7 +53,7 @@ class PlantSim:
         self.path_context = ''
         self.event_controller = ''
 
-    def load_model(self, filepath):
+    def load_model(self, filepath: str):
         """
         Load a Plant Simulation model
         :param filepath: The path to the model file
@@ -71,7 +71,7 @@ class PlantSim:
             
         print(f'  Model "{filepath}" loaded.')
 
-    def set_path_context(self, path_context):
+    def set_path_context(self, path_context: str):
         """
         Set the path context to the current path context
         :param path_context: The path context in PlantSim
@@ -82,7 +82,7 @@ class PlantSim:
 
         print(f'  Path context set to "{self.path_context}".')
 
-    def set_event_controller(self, event_controller='EventController'):
+    def set_event_controller(self, event_controller: str='EventController'):
         """
         Set the event controller to the current path context
         :param event_controller: The name of the event controller in PlantSim
@@ -128,7 +128,7 @@ class PlantSim:
 
         return self.plantsim.IsSimulationRunning()
 
-    def get_value(self, object_name):
+    def get_value(self, object_name: str):
         """
         Get the value of an object 
         :param object_name: The name of the object in PlantSim
@@ -137,7 +137,7 @@ class PlantSim:
 
         return self.plantsim.GetValue(object_name)
 
-    def set_value(self, object_name, value):
+    def set_value(self, object_name: str, value):
         """
         Set the value of an object in PlantSim
         :param object_name: The name of the object in PlantSim
@@ -146,7 +146,7 @@ class PlantSim:
 
         self.plantsim.SetValue(object_name, value)
 
-    def execute_simtalk(self, command_string, parameter=None, from_path_context=True):
+    def execute_simtalk(self, command_string: str, parameter=None, from_path_context: bool=True):
         """
         Execute a SimTalk command accodring to COM documentation:
         PlantSim.ExecuteSimTalk("->real; return 3.14159")
@@ -166,7 +166,7 @@ class PlantSim:
         else:
             self.plantsim.ExecuteSimTalk(command_string)
 
-    def get_table(self, table_name):
+    def get_table(self, table_name: str) -> DataFrame:
         """
         Reads the PlantSim table into a pandas DataFrame
         :param table_name: The name of the table in PlantSim
@@ -175,7 +175,7 @@ class PlantSim:
 
         return DataFrame(self, table_name)
 
-    def set_table(self, table_name, data_frame):
+    def set_table(self, table_name: str, data_frame: DataFrame):
         """
         Writes the DataFrame back to the PlantSim table.
         :param table_name: The name of the table in PlantSim
