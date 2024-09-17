@@ -12,7 +12,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="plantsim",
-    version="0.0.3",
+    version="0.1.0",
     author="Tilo van Ekeris, Lorenzo Ortiz Aneiros",
     author_email="tilo@vanekeris.de, lortane@pm.me",
     description="Python wrapper for Plant Simulation",
