@@ -85,22 +85,20 @@ class Plantsim:
 
         self.plantsim.StartSimulation(self.event_controller)
 
-    def get_object(self, object_name):
-        # "Smart" getter that has some limited ability to decide which kind of object to return
+    def stop_simulation(self):
+        """
+        Stop the simulation 
+        """
 
-        internal_class_name = self.get_value(f'{object_name}.internalClassName')
+        self.plantsim.StopSimulation()
 
-        if internal_class_name == 'AttributeExplorer':
-            # Attribute explorer that dynamically fills a table
-            return AttributeExplorer(self, object_name)
+    def is_simulation_running(self):
+        """
+        Check if the simulation is running
+        :return: True if the simulation is running, False otherwise
+        """
 
-        elif internal_class_name == 'NwData':
-            # Normal string
-            return self.get_value(object_name)
-
-        # Fallback: Return raw value of object
-        else:
-            return self.get_value(object_name)
+        return self.plantsim.IsSimulationRunning()
 
     def get_value(self, object_name):
 
