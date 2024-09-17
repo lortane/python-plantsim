@@ -12,7 +12,7 @@ from .error import Error
 from .exception import *
 from .table import DataFrame
 
-class Plantsim:
+class PlantSim:
 
     def __init__(self, version='', visible=True, trust_models=False, license_type='Professional'):        
         """

@@ -8,7 +8,7 @@ file LICENSE or https://opensource.org/licenses/MIT
 import pandas as pd
 
 
-class DatFrame(pd.DataFrame):
+class DataFrame(pd.DataFrame):
 
     def __init__(self, plantsim, table_name):
         """
