@@ -4,8 +4,12 @@ Distributed under the MIT license, see the accompanying
 file LICENSE or https://opensource.org/licenses/MIT
 """
 
+from enum import Enum
 
-class ErrorCode:
+class Error:
+
+    class Code(Enum):
+        INVALID_LICENSE = -2147221503
 
     @staticmethod
     def extract(args):

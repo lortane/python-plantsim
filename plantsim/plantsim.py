@@ -6,9 +6,9 @@ file LICENSE or https://opensource.org/licenses/MIT
 
 import win32com.client as win32
 
-from .error_code import ErrorCode
+from .error import Error
 from .attribute_explorer import AttributeExplorer
-
+from .exception import *
 
 class Plantsim:
 
@@ -23,7 +23,10 @@ class Plantsim:
         #self.plantsim = win32.Dispatch(dispatch_string)
 
         # Early-binding version
-        self.plantsim = win32.gencache.EnsureDispatch(dispatch_string)
+        try:
+            self.plantsim = win32.gencache.EnsureDispatch(dispatch_string)
+        except Exception as e:
+            raise RuntimeError(f"Failed to dispatch Plant Simulation with version '{version}': {e}")
 
         if visible:
             # Open the Plant Simulation window
@@ -37,43 +40,47 @@ class Plantsim:
         try:
             self.plantsim.SetLicenseType(self.license_type)
         except BaseException as e:
-            if ErrorCode.extract(e.args) == -2147221503:
-                raise Exception(f'The license type {self.license_type} does not seem to exist. Make sure it is a valid Plant Simluation license type.')
+            if Error.extract(e.args) == Error.Code.INVALID_LICENSE:
+                raise InvalidLicenseError(self.license_type)
 
         self.license_type = ''
         self.path_context = ''
         self.event_controller = ''
 
     def load_model(self, filepath):
+        
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f'Model file "{filepath}" not found!')
 
-        print(f'Loading model "{filepath}"...\n')
+        print(f'Loading model "{filepath}"...')
         try:
             self.plantsim.LoadModel(filepath)
         except BaseException as e:
-            if ErrorCode.extract(e.args) == -2147221503:
-                raise Exception(f'The license server or the selected license type "{self.license_type}" is not available.\n'
-                                + f'Make sure that the license server is up and running and you can connect to it (VPN etc.).\n'
-                                + f'Make sure that a valid license of type "{self.license_type}" is available in the license server.')
-
-    def set_event_controller(self):
-        self.event_controller = f'{self.path_context}.Eventcontroller'
+            if Error.extract(e.args) == Error.Code.INVALID_LICENSE:
+                raise InvalidLicenseError(self.license_type)
 
     def set_path_context(self, path_context):
 
         self.path_context = path_context
         self.plantsim.SetPathContext(self.path_context)
 
+    def set_event_controller(self, event_controller='EventController'):
+
+        if not self.path_context:
+            raise CommandOrderError("set_event_controller", "set_path_context")
+        self.event_controller = f'{self.path_context}.{event_controller}'
+
     def reset_simulation(self):
 
         if not self.event_controller:
-            raise Exception('You need to set an event controller first!')
+            raise CommandOrderError("reset_simulation", "set_event_controller")
 
         self.plantsim.ResetSimulation(self.event_controller)
 
     def start_simulation(self):
 
         if not self.event_controller:
-            raise Exception('You need to set an event controller first!')
+            raise CommandOrderError("start_simulation", "set_event_controller")
 
         self.plantsim.StartSimulation(self.event_controller)
 
