@@ -8,9 +8,9 @@ some more complex PlantSim data types like tables.
 ## Example
 
 ```python
-from plantsim.plantsim import Plantsim
+import plantsim.plantsim as ps
 
-plantsim = Plantsim(version='23.2', license_type='Research')
+plantsim = ps.PlantSim(version='23.2', license_type='Research')
 plantsim.load_model('model.spp')
 plantsim.set_path_context('.Context.In.Your.Model')
 table = plantsim.get_table('DataTable')
