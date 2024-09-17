@@ -9,12 +9,11 @@ some more complex PlantSim data types like tables.
 
 ```python
 from plantsim.plantsim import Plantsim
-from plantsim.table import Table
 
-plantsim = Plantsim(version='15.2', license_type='Research')
+plantsim = Plantsim(version='23.2', license_type='Research')
 plantsim.load_model('model.spp')
 plantsim.set_path_context('.Context.In.Your.Model')
-table = Table(plantsim, 'TableName')
+table = plantsim.get_table('DataTable')
 print(table) 
 ```
 
@@ -26,26 +25,12 @@ print(table)
 You need a working version of Tecnomatix Plant Simulation installed on your system to be able to use this package.
 
 
-### System settings
-
-If you have a NVIDIA 3D graphics card installed, make sure to select it as the default in the "NVIDIA Control Panel".
-Otherwise when loading a model into Plant Simulation, you will get an information window that you need to manually
-click every time.
-
-
-## Acknowledgements
-
-This repository was created within the Public Research Project
-[AlphaMES](https://www.tmdt.uni-wuppertal.de/de/projekte/alphames.html) run by the
-[Chair of Technologies and Management of Digital Transformation](https://www.tmdt.uni-wuppertal.de/de/startseite.html)
-within the [University of Wuppertal](https://www.uni-wuppertal.de/).
-
-It was funded via a research grant by the German Federal Ministry for Economics and Energy (BMWi).
-
+## Author
+This package is currently developed and maintained by Tilo van Ekeris and Constantin Waubert de Puiseau.
 
 ## Maintainers
 
-This package is currently maintained by Tilo van Ekeris and Constantin Waubert de Puiseau.
+This package is currently maintained by Lorenzo Ortiz Aneiros.
 
 
 ## Disclaimer
@@ -62,6 +47,7 @@ for stable interfaces etc.
 
 ```
 Copyright (c) 2021 Tilo van Ekeris / TMDT, University of Wuppertal
+Copyright (c) 2024 Lorenzo Ortiz Aneiros
 Distributed under the MIT license, see the accompanying
 file LICENSE or https://opensource.org/licenses/MIT
 ```
