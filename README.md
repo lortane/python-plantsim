@@ -10,11 +10,18 @@ some more complex PlantSim data types like tables.
 ```python
 import plantsim.plantsim as ps
 
-plantsim = ps.PlantSim(version='23.2', license_type='Research')
 plantsim.load_model('model.spp')
-plantsim.set_path_context('.Context.In.Your.Model')
-table = plantsim.get_table('DataTable')
+plantsim.set_path_context('.Models.Model')
+
+table = sim.get_table(plantsim, 'DataTable')
 print(table) 
+
+new_table = pd.DataFrame({
+    'Column1': [1, 2],
+    'Column2': [3, 4]
+})
+
+sim.set_table("DataTable", new_table)
 ```
 
 
