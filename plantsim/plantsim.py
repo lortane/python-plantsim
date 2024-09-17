@@ -8,9 +8,9 @@ file LICENSE or https://opensource.org/licenses/MIT
 import os
 import win32com.client as win32
 
-from .error import Error
-from .exception import *
-from .table import DataFrame
+from ._error import Error
+from ._exception import *
+from ._dataframe import DataFrame
 
 class PlantSim:
 
