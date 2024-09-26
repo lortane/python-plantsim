@@ -189,6 +189,25 @@ class PlantSim:
                 value = data_frame.iloc[row_idx, col_idx]
                 self.set_value(f'{table_name}[{col_idx + 1}, {row_idx + 1}]', value)
 
+    def run_simulation(self, input_variable, value, output_variable):
+        """
+        Run the simulation
+        :param input_variable: The variable to set
+        :param value: The value to set
+        :param output_variable): The variable to get
+        """
+
+        self.set_value(input_variable, value)
+        self.start_simulation()
+
+        while self.is_simulation_running():
+            pass
+
+        result = self.get_value(output_variable)
+        self.reset_simulation()
+
+        return result
+    
     def quit(self):
         """
         Quits the Plant Simulation application
