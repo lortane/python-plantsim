@@ -8,6 +8,7 @@ file LICENSE or https://opensource.org/licenses/MIT
 import os
 import concurrent.futures
 import win32com.client as win32
+from typing import Any, List, Tuple
 
 from ._error import Error
 from ._exception import *
@@ -150,7 +151,7 @@ class PlantSim:
         """
         self._plantsim.ResetSimulation(self._event_controller)
 
-    def run_simulation(self, data: tuple):
+    def run_simulation(self, data: Tuple[str, Any, str]) -> Any:
         """
         Run the simulation
         :param data: Tuple containing (input_variable, value, output_variable)
@@ -169,7 +170,7 @@ class PlantSim:
 
         return result
 
-    def run_simulations_in_parallel(self, simulation_params: list[tuple], max_workers=None):
+    def run_simulations_in_parallel(self, simulation_params: List[Tuple[str, Any, str]], max_workers: int=None) -> List[Any]:
         """
         Run multiple simulations in parallel using multiprocessing.Pool
         :param simulation_params: List of tuples, each containing (input_variable, value, output_variable)
