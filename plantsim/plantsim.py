@@ -6,127 +6,69 @@ file LICENSE or https://opensource.org/licenses/MIT
 """
 
 import os
+import concurrent.futures
 import win32com.client as win32
 
 from ._error import Error
 from ._exception import *
 from ._dataframe import DataFrame
+from ._internal import _run_simulation_worker
 
 class PlantSim:
 
-    def __init__(self, version='', visible=True, trust_models=False, license_type='Professional'):        
+    def __init__(self, version='', license_type='Professional'):        
         """
         Initialize the Plant Simulation application
         :param version: The version of Plant Simulation to use
-        :param visible: If True, the Plant Simulation window will be visible
-        :param trust_models: If True, Plant Simulation models will be allowed to access the computer
         :param license_type: The license type to use (Professional, Student, Viewer)
         """
 
-        print(f":: Launching Plant Simulation (version={version}, license={license_type}, visibility={visible}, trust_models={trust_models})")
+        self._dispatch_string = 'Tecnomatix.PlantSimulation.RemoteControl'
+        self._version = version
+        if self._version != '':
+            self._dispatch_string += f'.{self._version}'
 
-        dispatch_string = 'Tecnomatix.PlantSimulation.RemoteControl'
-        if version != '':
-            dispatch_string += f'.{version}'
+        self._license_type = license_type
+        self._visible = False
+        self._trust_models = False
+        self._path_context = None
+        self._event_controller = None
+        self._model = None
+        self._plantsim = None
 
-        # Early-binding version
+    def initialize(self):
+        """
+        Initialize the Plant Simulation application
+        """
+
         try:
-            self.plantsim = win32.gencache.EnsureDispatch(dispatch_string)
+            self._plantsim = win32.gencache.EnsureDispatch(self._dispatch_string)
         except Exception as e:
-            raise RuntimeError(f"Failed to dispatch Plant Simulation with version '{version}': {e}")
+            raise RuntimeError(f"Failed to dispatch Plant Simulation with version '{self._version}': {e}")
 
-        if visible:
-            # Open the Plant Simulation window
-            self.plantsim.SetVisible(True)
-
-        if trust_models:
-            # Allow Plant Simulation models to access the computer
-            self.plantsim.SetTrustModels(True)
-
-        self.license_type = license_type
         try:
-            self.plantsim.SetLicenseType(self.license_type)
+            self._plantsim.SetLicenseType(self._license_type)
         except BaseException as e:
             if Error.extract(e.args) == Error.Code.INVALID_LICENSE:
-                raise InvalidLicenseError(self.license_type)
-
-        self.path_context = ''
-        self.event_controller = ''
-
-    def load_model(self, filepath: str):
-        """
-        Load a Plant Simulation model
-        :param filepath: The path to the model file
-        """
-        
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(f'Model file "{filepath}" not found!')
-
-        print(f'  Loading model "{filepath}"...')
-        try:
-            self.plantsim.LoadModel(filepath)
-        except BaseException as e:
-            if Error.extract(e.args) == Error.Code.INVALID_LICENSE:
-                raise InvalidLicenseError(self.license_type)
+                raise InvalidLicenseError(self._license_type)
             
-        print(f'  Model "{filepath}" loaded.')
+        self._plantsim.LoadModel(self.model)
+        self._plantsim.SetPathContext(self._path_context)
 
-    def set_path_context(self, path_context: str):
-        """
-        Set the path context to the current path context
-        :param path_context: The path context in PlantSim
-        """
+        if self._trust_models:
+            self._plantsim.SetTrustModels(True)
 
-        self.path_context = path_context
-        self.plantsim.SetPathContext(self.path_context)
-
-        print(f'  Path context set to "{self.path_context}".')
-
-    def set_event_controller(self, event_controller: str='EventController'):
-        """
-        Set the event controller to the current path context
-        :param event_controller: The name of the event controller in PlantSim
-        """
-
-        if not self.path_context:
-            raise CommandOrderError("set_event_controller", "set_path_context")
-        self.event_controller = f'{self.path_context}.{event_controller}'
-
-        print(f'  Event controller set to "{self.event_controller}".')
-
-    def reset_simulation(self):
-        """
-        Reset the simulation
-        """
-
-        if not self.event_controller:
-            raise CommandOrderError("reset_simulation", "set_event_controller")
-        self.plantsim.ResetSimulation(self.event_controller)
-
-    def start_simulation(self):
-        """
-        Start the simulation
-        """
-
-        if not self.event_controller:
-            raise CommandOrderError("start_simulation", "set_event_controller")
-
-        self.plantsim.StartSimulation(self.event_controller)
-
-    def stop_simulation(self):
-        """
-        Stop the simulation 
-        """
-
-        self.plantsim.StopSimulation()
-
-    def is_simulation_running(self):
-        """
-        Check if the simulation is running
-        :return: True if the simulation is running, False otherwise
-        """
-
-        return self.plantsim.IsSimulationRunning()
+        if self._visible:
+            self._plantsim.SetVisible(True)
+            
+        print(f":: Plant Simulation initialized with the following parameters:\n"
+                f"   Version: {self._version}\n"
+                f"   License Type: {self._license_type}\n"
+                f"   Visible: {self._visible}\n"
+                f"   Trust Models: {self._trust_models}\n"
+                f"   Path Context: {self._path_context}\n"
+                f"   Event Controller: {self._event_controller}\n"
+                f"   Model: {self._model}")
 
     def get_value(self, object_name: str):
         """
@@ -135,7 +77,7 @@ class PlantSim:
         :return: The value of the object
         """
 
-        return self.plantsim.GetValue(object_name)
+        return self._plantsim.GetValue(object_name)
 
     def set_value(self, object_name: str, value):
         """
@@ -144,7 +86,7 @@ class PlantSim:
         :param value: The value to set
         """
 
-        self.plantsim.SetValue(object_name, value)
+        self._plantsim.SetValue(object_name, value)
 
     def execute_simtalk(self, command_string: str, parameter=None, from_path_context: bool=True):
         """
@@ -157,14 +99,14 @@ class PlantSim:
                                 Else, needs the whole path in the command
         """
         if from_path_context:
-            command_string = f'{self.path_context}.{command_string}'
+            command_string = f'{self._path_context}.{command_string}'
         else:
             command_string = f'.{command_string}'
 
         if parameter:
-            self.plantsim.ExecuteSimTalk(command_string, parameter)
+            self._plantsim.ExecuteSimTalk(command_string, parameter)
         else:
-            self.plantsim.ExecuteSimTalk(command_string)
+            self._plantsim.ExecuteSimTalk(command_string)
 
     def get_table(self, table_name: str) -> DataFrame:
         """
@@ -189,13 +131,32 @@ class PlantSim:
                 value = data_frame.iloc[row_idx, col_idx]
                 self.set_value(f'{table_name}[{col_idx + 1}, {row_idx + 1}]', value)
 
-    def run_simulation(self, input_variable, value, output_variable):
+    def start_simulation(self):
+        """
+        Start the simulation
+        """
+        self._plantsim.StartSimulation(self._event_controller)
+
+    def is_simulation_running(self):
+        """
+        Check if the simulation is running
+        :return: True if the simulation is running, False otherwise
+        """
+        return self._plantsim.IsSimulationRunning()
+    
+    def reset_simulation(self):
+        """
+        Reset the simulation
+        """
+        self._plantsim.ResetSimulation(self._event_controller)
+
+    def run_simulation(self, data: tuple):
         """
         Run the simulation
-        :param input_variable: The variable to set
-        :param value: The value to set
-        :param output_variable): The variable to get
+        :param data: Tuple containing (input_variable, value, output_variable)
+        :return: The result of the simulation
         """
+        input_variable, value, output_variable = data
 
         self.set_value(input_variable, value)
         self.start_simulation()
@@ -207,10 +168,90 @@ class PlantSim:
         self.reset_simulation()
 
         return result
-    
+
+    def run_simulations_in_parallel(self, simulation_params: list[tuple], max_workers=None):
+        """
+        Run multiple simulations in parallel using multiprocessing.Pool
+        :param simulation_params: List of tuples, each containing (input_variable, value, output_variable)
+        :param max_workers: Maximum number of worker processes to use (default: number of CPUs)
+        :return: List of results from each simulation
+        """
+        pool_params = [
+            (
+                self._trust_models,
+                self._dispatch_string,
+                self._version,
+                self._model,
+                self._path_context,
+                self._event_controller,
+                params,
+                self._license_type
+            ) for params in simulation_params
+        ]
+
+        results = []
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            future_to_params = {executor.submit(_run_simulation_worker, param): param for param in pool_params}
+            for future in concurrent.futures.as_completed(future_to_params):
+                params = future_to_params[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as exc:
+                    print(f'Simulation with params {params} generated an exception: {exc}')
+        return results
+
     def quit(self):
         """
-        Quits the Plant Simulation application
+        Quit the Plant Simulation application
         """
+        self._plantsim.Quit()
 
-        self.plantsim.Quit()
+    @property
+    def version(self):
+        return self._version
+
+    @property
+    def visible(self):
+        return self._visible
+    
+    @visible.setter
+    def visible(self, value):
+        self._visible = value
+
+    @property
+    def trust_models(self):
+        return self._trust_models
+    
+    @trust_models.setter
+    def trust_models(self, value):
+        self._trust_models = value
+
+    @property
+    def model(self):
+        return self._model
+    
+    @model.setter
+    def model(self, path):
+        if not os.path.exists(path):
+            raise FileNotFoundError(f'Model file "{path}" not found!')
+
+        self._model = path
+
+    @property
+    def path_context(self):
+        return self._path_context
+    
+    @path_context.setter
+    def path_context(self, value):
+        self._path_context = value
+
+    @property
+    def event_controller(self):
+        return self._event_controller
+    
+    @event_controller.setter
+    def event_controller(self, value):
+        if not self._path_context:
+            raise CommandOrderError("set_event_controller", "set_path_context")
+        self._event_controller = f'{self._path_context}.{value}'
