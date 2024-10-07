@@ -24,6 +24,6 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Operating System :: Microsoft :: Windows",
     ],
-    python_requires='>=3.8',
-    install_requires=['pywin32==306', 'pandas']
+    python_requires=">=3.8",
+    install_requires=["pywin32==306", "pandas"],
 )

@@ -7,8 +7,8 @@ file LICENSE or https://opensource.org/licenses/MIT
 
 from enum import Enum
 
-class Error:
 
+class Error:
     class Code(Enum):
         INVALID_LICENSE = -2147221503
 

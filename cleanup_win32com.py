@@ -22,12 +22,11 @@ import shutil
 
 
 def main():
-
     gen_path = win32com.__gen_path__
 
-    print(f'Removing the following directory with all of its contents:')
-    print(f'{gen_path}')
-    print(f'Press enter to continue or Ctrl+C to cancel...')
+    print(f"Removing the following directory with all of its contents:")
+    print(f"{gen_path}")
+    print(f"Press enter to continue or Ctrl+C to cancel...")
 
     try:
         input()
@@ -37,5 +36,5 @@ def main():
     shutil.rmtree(gen_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
