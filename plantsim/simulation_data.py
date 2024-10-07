@@ -29,14 +29,11 @@ class SimulationData:
         else:
             raise StopIteration()
 
-    def __str__(self) -> str:
-        return (
-            f"SimulationData(\n"
-            f"  input_variables={self._input_variables},\n"
-            f"  values={self._values},\n"
-            f"  output_variables={self._output_variables}\n"
-            f")"
-        )
+    def __str__(self):
+        data_str = "SimulationData:\n"
+        for var, val in zip(self._input_variables, self._values):
+            data_str += f"  {var}: {val}\n"
+        return data_str
 
     def get_output_variables(self) -> List[str]:
         return self._output_variables
@@ -59,10 +56,8 @@ class SimulationResult:
         else:
             raise StopIteration()
 
-    def __str__(self) -> str:
-        return (
-            f"SimulationResult(\n"
-            f"  output_variables={self._output_variables},\n"
-            f"  values={self._values}\n"
-            f")"
-        )
+    def __str__(self):
+        result_str = "SimulationResult:\n"
+        for var, val in zip(self._output_variables, self._values):
+            result_str += f"  {var}: {val}\n"
+        return result_str
