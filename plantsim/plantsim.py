@@ -8,26 +8,27 @@ file LICENSE or https://opensource.org/licenses/MIT
 import os
 import concurrent.futures
 import win32com.client as win32
-from typing import Any, List, Tuple
+from typing import List
 
 from ._error import Error
-from ._exception import *
+from ._exception import InvalidLicenseError, CommandOrderError
 from ._dataframe import DataFrame
 from ._internal import _run_simulation_worker
+from .simulation_data import SimulationData, SimulationResult
+
 
 class PlantSim:
-
-    def __init__(self, version='', license_type='Professional'):        
+    def __init__(self, version="", license_type="Professional"):
         """
         Initialize the Plant Simulation application
         :param version: The version of Plant Simulation to use
         :param license_type: The license type to use (Professional, Student, Viewer)
         """
 
-        self._dispatch_string = 'Tecnomatix.PlantSimulation.RemoteControl'
+        self._dispatch_string = "Tecnomatix.PlantSimulation.RemoteControl"
         self._version = version
-        if self._version != '':
-            self._dispatch_string += f'.{self._version}'
+        if self._version != "":
+            self._dispatch_string += f".{self._version}"
 
         self._license_type = license_type
         self._visible = False
@@ -45,14 +46,16 @@ class PlantSim:
         try:
             self._plantsim = win32.gencache.EnsureDispatch(self._dispatch_string)
         except Exception as e:
-            raise RuntimeError(f"Failed to dispatch Plant Simulation with version '{self._version}': {e}")
+            raise RuntimeError(
+                f"Failed to dispatch Plant Simulation with version '{self._version}': {e}"
+            )
 
         try:
             self._plantsim.SetLicenseType(self._license_type)
         except BaseException as e:
             if Error.extract(e.args) == Error.Code.INVALID_LICENSE:
                 raise InvalidLicenseError(self._license_type)
-            
+
         self._plantsim.LoadModel(self.model)
         self._plantsim.SetPathContext(self._path_context)
 
@@ -61,19 +64,21 @@ class PlantSim:
 
         if self._visible:
             self._plantsim.SetVisible(True)
-            
-        print(f":: Plant Simulation initialized with the following parameters:\n"
-                f"   Version: {self._version}\n"
-                f"   License Type: {self._license_type}\n"
-                f"   Visible: {self._visible}\n"
-                f"   Trust Models: {self._trust_models}\n"
-                f"   Path Context: {self._path_context}\n"
-                f"   Event Controller: {self._event_controller}\n"
-                f"   Model: {self._model}")
+
+        print(
+            f":: Plant Simulation initialized with the following parameters:\n"
+            f"   Version: {self._version}\n"
+            f"   License Type: {self._license_type}\n"
+            f"   Visible: {self._visible}\n"
+            f"   Trust Models: {self._trust_models}\n"
+            f"   Path Context: {self._path_context}\n"
+            f"   Event Controller: {self._event_controller}\n"
+            f"   Model: {self._model}"
+        )
 
     def get_value(self, object_name: str):
         """
-        Get the value of an object 
+        Get the value of an object
         :param object_name: The name of the object in PlantSim
         :return: The value of the object
         """
@@ -89,7 +94,9 @@ class PlantSim:
 
         self._plantsim.SetValue(object_name, value)
 
-    def execute_simtalk(self, command_string: str, parameter=None, from_path_context: bool=True):
+    def execute_simtalk(
+        self, command_string: str, parameter=None, from_path_context: bool = True
+    ):
         """
         Execute a SimTalk command accodring to COM documentation:
         PlantSim.ExecuteSimTalk("->real; return 3.14159")
@@ -100,9 +107,9 @@ class PlantSim:
                                 Else, needs the whole path in the command
         """
         if from_path_context:
-            command_string = f'{self._path_context}.{command_string}'
+            command_string = f"{self._path_context}.{command_string}"
         else:
-            command_string = f'.{command_string}'
+            command_string = f".{command_string}"
 
         if parameter:
             self._plantsim.ExecuteSimTalk(command_string, parameter)
@@ -130,7 +137,7 @@ class PlantSim:
         for row_idx in range(row_count):
             for col_idx in range(col_count):
                 value = data_frame.iloc[row_idx, col_idx]
-                self.set_value(f'{table_name}[{col_idx + 1}, {row_idx + 1}]', value)
+                self.set_value(f"{table_name}[{col_idx + 1}, {row_idx + 1}]", value)
 
     def start_simulation(self):
         """
@@ -144,38 +151,46 @@ class PlantSim:
         :return: True if the simulation is running, False otherwise
         """
         return self._plantsim.IsSimulationRunning()
-    
+
     def reset_simulation(self):
         """
         Reset the simulation
         """
         self._plantsim.ResetSimulation(self._event_controller)
 
-    def run_simulation(self, data: Tuple[str, Any, str]) -> Any:
+    def run_simulation(self, simulation_data: SimulationData) -> SimulationResult:
         """
         Run the simulation
-        :param data: Tuple containing (input_variable, value, output_variable)
-        :return: The result of the simulation
+        :param simulation_data: SimulationData instance containing lists of input_variable, value, output_variable
+        :return: The results of the simulation
         """
-        input_variable, value, output_variable = data
 
-        self.set_value(input_variable, value)
+        for input_variable, value in simulation_data:
+            self.set_value(input_variable, value)
+
         self.start_simulation()
 
         while self.is_simulation_running():
             pass
 
-        result = self.get_value(output_variable)
+        output_values = []
+        for output_variable in simulation_data.get_output_variables():
+            output_values.append(self.get_value(output_variable))
+
         self.reset_simulation()
 
-        return result
+        return SimulationResult(simulation_data.get_output_variables(), output_values)
 
-    def run_simulations_in_parallel(self, simulation_params: List[Tuple[str, Any, str]], max_workers: int=None) -> List[Any]:
+    def run_simulations_in_parallel(
+        self,
+        simulations_data: List[SimulationData],
+        max_workers: int = None,
+    ) -> List[SimulationResult]:
         """
         Run multiple simulations in parallel using multiprocessing.Pool
-        :param simulation_params: List of tuples, each containing (input_variable, value, output_variable)
+        :param simulations_data: List of SimulationData instances
         :param max_workers: Maximum number of worker processes to use (default: number of CPUs)
-        :return: List of results from each simulation
+        :return: List of lists results from each simulation
         """
         pool_params = [
             (
@@ -185,21 +200,29 @@ class PlantSim:
                 self._model,
                 self._path_context,
                 self._event_controller,
-                params,
-                self._license_type
-            ) for params in simulation_params
+                simulation_data,
+                self._license_type,
+            )
+            for simulation_data in simulations_data
         ]
 
         results = []
-        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-            future_to_params = {executor.submit(_run_simulation_worker, param): param for param in pool_params}
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=max_workers
+        ) as executor:
+            future_to_params = {
+                executor.submit(_run_simulation_worker, param): param
+                for param in pool_params
+            }
             for future in concurrent.futures.as_completed(future_to_params):
                 params = future_to_params[future]
                 try:
                     result = future.result()
                     results.append(result)
                 except Exception as exc:
-                    print(f'Simulation with params {params} generated an exception: {exc}')
+                    print(
+                        f"Simulation with params {params} generated an exception: {exc}"
+                    )
         return results
 
     def quit(self):
@@ -215,7 +238,7 @@ class PlantSim:
     @property
     def visible(self):
         return self._visible
-    
+
     @visible.setter
     def visible(self, value):
         self._visible = value
@@ -223,7 +246,7 @@ class PlantSim:
     @property
     def trust_models(self):
         return self._trust_models
-    
+
     @trust_models.setter
     def trust_models(self, value):
         self._trust_models = value
@@ -231,7 +254,7 @@ class PlantSim:
     @property
     def model(self):
         return self._model
-    
+
     @model.setter
     def model(self, path):
         if not os.path.exists(path):
@@ -242,7 +265,7 @@ class PlantSim:
     @property
     def path_context(self):
         return self._path_context
-    
+
     @path_context.setter
     def path_context(self, value):
         self._path_context = value
@@ -250,9 +273,9 @@ class PlantSim:
     @property
     def event_controller(self):
         return self._event_controller
-    
+
     @event_controller.setter
     def event_controller(self, value):
         if not self._path_context:
             raise CommandOrderError("set_event_controller", "set_path_context")
-        self._event_controller = f'{self._path_context}.{value}'
+        self._event_controller = f"{self._path_context}.{value}"
