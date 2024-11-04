@@ -29,7 +29,12 @@ if __name__ == "__main__":
     sim.path_context = ".Models.Model"
     sim.event_controller = "EventController"
 
-    sim.initialize()
+    try:
+        sim.initialize()
+    except RuntimeError as e:
+        print(e)
+        sys.exit(1)
+
 
     experiments = [
         SimulationData(

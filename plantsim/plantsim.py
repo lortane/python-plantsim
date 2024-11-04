@@ -6,8 +6,10 @@ file LICENSE or https://opensource.org/licenses/MIT
 """
 
 import os
+import shutil
 import concurrent.futures
 import win32com.client as win32
+from win32com import __gen_path__ as win32_gen_path
 from typing import List
 
 from ._error import Error
@@ -44,11 +46,11 @@ class PlantSim:
         """
 
         try:
-            self._plantsim = win32.gencache.EnsureDispatch(self._dispatch_string)
+            self._plantsim = self.ensure_dispatch()
         except Exception as e:
             raise RuntimeError(
                 f"Failed to dispatch Plant Simulation with version '{self._version}': {e}"
-            )
+        )
 
         try:
             self._plantsim.SetLicenseType(self._license_type)
@@ -75,6 +77,19 @@ class PlantSim:
             f"   Event Controller: {self._event_controller}\n"
             f"   Model: {self._model}"
         )
+
+    def _ensure_dispatch(self):
+        """
+        Ensure the dispatch of the Plant Simulation application
+        :return: The Plant Simulation application
+        """
+        try:
+            return win32.gencache.EnsureDispatch(self._dispatch_string)
+        except AttributeError:
+            shutil.rmtree(win32_gen_path)
+            return win32.gencache.EnsureDispatch(self._dispatch_string)
+
+
 
     def get_value(self, object_name: str):
         """
